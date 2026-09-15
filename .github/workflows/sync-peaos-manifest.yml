@@ -1,0 +1,50 @@
+name: Sync peaOS manifest
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-peaos-manifest
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch authoritative peaOS manifest
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --retry 3 \
+            -H 'Accept: application/vnd.github.raw+json' \
+            'https://api.github.com/repos/alexiusandromedavsgalaxia-lgtm/peaOS/contents/peacloud.json?ref=main' \
+            -o /tmp/peacloud.json.b64
+          base64 -d /tmp/peacloud.json.b64 > web/data/peacloud.json
+          node - <<'NODE'
+          const fs = require('fs');
+          const manifest = JSON.parse(fs.readFileSync('web/data/peacloud.json', 'utf8'));
+          if (manifest.product !== 'peaOS') throw new Error('manifest product mismatch');
+          if (manifest.certificate_version !== 3) throw new Error('certificate version mismatch');
+          if (manifest.certificate_type !== 'SigningCertificate') throw new Error('certificate type mismatch');
+          if (manifest.certificate_protocol !== 'R35-SHA512') throw new Error('certificate protocol mismatch');
+          console.log(`synced peaOS ${manifest.version}`);
+          NODE
+
+      - name: Commit changed manifest
+        run: |
+          if git diff --quiet -- web/data/peacloud.json; then
+            echo 'manifest unchanged'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add web/data/peacloud.json
+          git commit -m 'sync peaOS manifest'
+          git push
