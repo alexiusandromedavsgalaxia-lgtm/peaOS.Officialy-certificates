@@ -1,9 +1,10 @@
-name: Sync certificate registry mirrors
+name: Sync web registry to root
 
 on:
   push:
+    branches: [main]
     paths:
-      - registry.json
+      - web/registry.json
       - .github/workflows/sync-readme-registry.yml
   workflow_dispatch:
 
@@ -17,11 +18,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate authoritative registry
+      - name: Validate web registry source
         run: |
           node - <<'NODE'
           const fs = require('fs');
-          const registry = JSON.parse(fs.readFileSync('registry.json', 'utf8'));
+          const registry = JSON.parse(fs.readFileSync('web/registry.json', 'utf8'));
           if (registry.issuer !== 'peaOS.Officialy-certificates') throw new Error('registry issuer mismatch');
           if (registry.schema !== 1) throw new Error('unsupported registry schema');
           if (registry.peaOS_certificate_version !== 3) throw new Error('certificate version mismatch');
@@ -34,11 +35,11 @@ jobs:
             if (typeof cert.status !== 'string' || !cert.status) throw new Error(`certificate ${cert.id} without status`);
             if (typeof cert.sha512 !== 'string' || !/^[0-9a-f]{128}$/.test(cert.sha512)) throw new Error(`certificate ${cert.id} has invalid SHA-512`);
           }
-          console.log(`authoritative registry: ${registry.certificates.length} certificate(s)`);
+          console.log(`web registry source: ${registry.certificates.length} certificate(s)`);
           NODE
 
-      - name: Mirror authoritative registry to web
-        run: cp registry.json web/registry.json
+      - name: Promote web registry to root
+        run: cp web/registry.json registry.json
 
       - name: Generate README registry section
         run: |
@@ -46,7 +47,7 @@ jobs:
           import json
           from pathlib import Path
 
-          registry = json.loads(Path("registry.json").read_text(encoding="utf-8"))
+          registry = json.loads(Path("web/registry.json").read_text(encoding="utf-8"))
           certs = registry.get("certificates", [])
 
           active = sum(1 for c in certs if c.get("status") == "active")
@@ -100,17 +101,17 @@ jobs:
           Path("README.md").write_text(readme, encoding="utf-8")
           PY
 
-      - name: Verify mirrors are byte-identical
-        run: cmp -s registry.json web/registry.json
+      - name: Verify root and web registries are byte-identical
+        run: cmp -s web/registry.json registry.json
 
-      - name: Commit synchronized mirrors
+      - name: Commit root registry and README
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add web/registry.json README.md
+          git add registry.json README.md
           if git diff --cached --quiet; then
-            echo "All registry mirrors already synchronized"
+            echo "Root registry and README already synchronized"
             exit 0
           fi
-          git commit -m "chore: sync registry mirrors"
+          git commit -m "chore: sync root registry from web"
           git push
