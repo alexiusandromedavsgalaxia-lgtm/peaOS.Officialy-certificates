@@ -1,8 +1,0 @@
-{
-  "schema": 1,
-  "issuer": "peaOS.Officialy-certificates",
-  "peaOS_certificate_version": 3,
-  "certificate_type": "SigningCertificate",
-  "authentication": "R35-SHA512",
-  "certificates": []
-}
