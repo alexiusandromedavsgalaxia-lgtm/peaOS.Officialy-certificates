@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#111827">
+  <title>peaCloud · Certificates</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#home" aria-label="peaCloud inicio"><span class="brand-mark">P</span><span>peaCloud</span></a>
+    <nav id="nav" class="nav" aria-label="Navegación">
+      <a href="#certificates">Certificados</a>
+      <a href="#wdp">WDP</a>
+      <button id="accountButton" class="account-button">Iniciar sesión</button>
+    </nav>
+  </header>
+
+  <main id="app" class="shell"></main>
+
+  <dialog id="authDialog">
+    <form method="dialog" id="authForm" class="dialog-card">
+      <button class="close" value="cancel" aria-label="Cerrar">×</button>
+      <div id="authContent"></div>
+    </form>
+  </dialog>
+
+  <dialog id="certDialog">
+    <form method="dialog" id="certForm" class="dialog-card">
+      <button class="close" value="cancel" aria-label="Cerrar">×</button>
+      <h2>Crear certificado</h2>
+      <p class="muted">Genera un registro local de desarrollo. La emisión oficial requiere un backend de autoridad.</p>
+      <label>Nombre del certificado<input name="name" required maxlength="80" placeholder="Mi aplicación"></label>
+      <label>Origen autorizado<input name="origin" required maxlength="160" placeholder="https://example.com"></label>
+      <label>Distribución<select name="distribution"><option value="Local">Local</option><option value="WebDistribution">Web Distribution</option></select></label>
+      <button class="primary" type="submit">Crear certificado</button>
+      <p id="certFormError" class="error"></p>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
