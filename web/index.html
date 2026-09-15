@@ -3,41 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#111827">
+  <meta name="theme-color" content="#080a0f">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="peaCloud · registro de certificados de firma para peaOS">
   <title>peaCloud · Certificates</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <div class="ambient ambient-a" aria-hidden="true"></div><div class="ambient ambient-b" aria-hidden="true"></div>
   <header class="topbar">
-    <a class="brand" href="#home" aria-label="peaCloud inicio"><span class="brand-mark">P</span><span>peaCloud</span></a>
+    <a class="brand" href="#home" aria-label="peaCloud inicio"><span class="brand-mark">P</span><span>peaCloud</span><span class="brand-beta">BETA</span></a>
     <nav id="nav" class="nav" aria-label="Navegación">
-      <a href="#certificates">Certificados</a>
-      <a href="#wdp">WDP</a>
+      <a href="#certificates">Certificados</a><a href="#wdp">WDP</a>
+      <span id="connectionPill" class="connection-pill"><i></i> conectando</span>
       <button id="accountButton" class="account-button">Iniciar sesión</button>
     </nav>
   </header>
-
   <main id="app" class="shell"></main>
-
-  <dialog id="authDialog">
-    <form method="dialog" id="authForm" class="dialog-card">
-      <button class="close" value="cancel" aria-label="Cerrar">×</button>
-      <div id="authContent"></div>
-    </form>
-  </dialog>
-
-  <dialog id="certDialog">
-    <form method="dialog" id="certForm" class="dialog-card">
-      <button class="close" value="cancel" aria-label="Cerrar">×</button>
-      <h2>Crear certificado de firma</h2>
-      <p class="muted">Este certificado identifica una clave de firma. No está ligado a una aplicación, dominio ni programa de distribución.</p>
-      <label>Nombre del certificado<input name="name" required maxlength="80" placeholder="Mi identidad de firma"></label>
-      <div class="notice">Tipo: <strong>SigningCertificate</strong><br>Protocolo: <strong>R35-SHA512</strong><br>Algoritmo de clave: <strong>Ed25519</strong></div>
-      <button class="primary" type="submit">Crear certificado local</button>
-      <p id="certFormError" class="error"></p>
-    </form>
-  </dialog>
-
+  <dialog id="authDialog"><form method="dialog" id="authForm" class="dialog-card"><button class="close" value="cancel" aria-label="Cerrar">×</button><div id="authContent"></div></form></dialog>
+  <dialog id="certDialog"><form method="dialog" id="certForm" class="dialog-card"><button class="close" value="cancel" aria-label="Cerrar">×</button><div class="dialog-icon">✦</div><h2>Crear certificado de firma</h2><p class="muted">Genera un borrador local para una identidad criptográfica. No está ligado a una app, dominio ni programa de distribución.</p><label>Nombre del certificado<input name="name" required maxlength="80" placeholder="Mi identidad de firma"></label><div class="notice"><b>SigningCertificate</b><span>R35-SHA512 · Ed25519</span></div><button class="primary" type="submit">Crear certificado local <span>→</span></button><p id="certFormError" class="error"></p></form></dialog>
   <script src="app.js"></script>
 </body>
 </html>
