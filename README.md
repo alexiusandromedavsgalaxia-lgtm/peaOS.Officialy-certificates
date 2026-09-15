@@ -4,7 +4,7 @@
 
 ## Web de peaCloud
 
-**[Abrir peaCloud Certificates](./web/)**
+**[Abrir peaCloud Certificates](https://alxiusandromedavsgalaxia-lgtm.github.io)**
 
 La web incluye un visor de certificados, creación de certificados para desarrollo, cuenta peaCloud local y formulario de inscripción al **WDP (Web Distribution Program)**.
 
