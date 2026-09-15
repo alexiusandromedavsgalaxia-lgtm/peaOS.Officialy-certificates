@@ -2,7 +2,13 @@
 
 > visor del registro de certificados conocido por este repositorio
 
-Este README funciona como visor humano del estado del sistema de certificados.
+## Web de peaCloud
+
+**[Abrir peaCloud Certificates](./web/)**
+
+La web incluye un visor de certificados, creación de certificados para desarrollo, cuenta peaCloud local y formulario de inscripción al **WDP (Web Distribution Program)**.
+
+> **Importante:** esta primera versión es una aplicación estática. Las cuentas, certificados creados y solicitudes WDP se guardan en el navegador mediante `localStorage`; no se presentan como un servicio cloud real ni como certificados oficialmente emitidos. La activación, revocación y revisión oficial requieren un backend de autoridad.
 
 ## Estado actual
 
