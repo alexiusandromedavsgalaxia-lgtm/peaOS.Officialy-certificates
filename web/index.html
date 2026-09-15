@@ -29,12 +29,11 @@
   <dialog id="certDialog">
     <form method="dialog" id="certForm" class="dialog-card">
       <button class="close" value="cancel" aria-label="Cerrar">×</button>
-      <h2>Crear certificado</h2>
-      <p class="muted">Genera un registro local de desarrollo. La emisión oficial requiere un backend de autoridad.</p>
-      <label>Nombre del certificado<input name="name" required maxlength="80" placeholder="Mi aplicación"></label>
-      <label>Origen autorizado<input name="origin" required maxlength="160" placeholder="https://example.com"></label>
-      <label>Distribución<select name="distribution"><option value="Local">Local</option><option value="WebDistribution">Web Distribution</option></select></label>
-      <button class="primary" type="submit">Crear certificado</button>
+      <h2>Crear certificado de firma</h2>
+      <p class="muted">Este certificado identifica una clave de firma. No está ligado a una aplicación, dominio ni programa de distribución.</p>
+      <label>Nombre del certificado<input name="name" required maxlength="80" placeholder="Mi identidad de firma"></label>
+      <div class="notice">Tipo: <strong>SigningCertificate</strong><br>Protocolo: <strong>R35-SHA512</strong><br>Algoritmo de clave: <strong>Ed25519</strong></div>
+      <button class="primary" type="submit">Crear certificado local</button>
       <p id="certFormError" class="error"></p>
     </form>
   </dialog>
