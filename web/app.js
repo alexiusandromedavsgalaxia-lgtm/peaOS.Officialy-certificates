@@ -2,7 +2,8 @@ const STORAGE_KEY = 'peacloud-state-v3';
 const LEGACY_KEY = 'peacloud-state-v2';
 const PEAOS_MANIFEST = 'https://raw.githubusercontent.com/alexiusandromedavsgalaxia-lgtm/peaOS/main/peacloud.json';
 const CERT_REGISTRY = 'https://raw.githubusercontent.com/alexiusandromedavsgalaxia-lgtm/peaOS.Officialy-certificates/main/registry.json';
-const SYNC_INTERVAL = 5000;
+const SYNC_INTERVAL = 30000;
+const SYNC_TIMEOUT = 15000;
 const PBKDF2_ITERATIONS = 600000;
 
 const app = document.querySelector('#app');
@@ -18,6 +19,7 @@ let state = loadState();
 let integration = { status: 'connecting', os: null, registry: null, error: null, lastSync: null };
 let syncTimer = null;
 let syncController = null;
+let syncInFlight = false;
 
 function loadState() {
   try {
@@ -47,9 +49,15 @@ function validPeaCloudEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-async function fetchFresh(url) {
+async function fetchFresh(url, signal) {
   const separator = url.includes('?') ? '&' : '?';
-  return fetch(`${url}${separator}_=${Date.now()}`, { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' }, signal: syncController?.signal });
+  const response = await fetch(`${url}${separator}_=${Date.now()}`, {
+    cache: 'no-store',
+    headers: { 'Cache-Control': 'no-cache' },
+    signal
+  });
+  if (!response.ok) throw new Error(`${response.status} ${response.statusText || 'respuesta HTTP no válida'} al leer ${new URL(url).pathname}`);
+  return response;
 }
 
 function validateRemote(os, registry) {
@@ -67,24 +75,42 @@ function validateRemote(os, registry) {
   }
 }
 
-async function syncPeaOS({ silent = false } = {}) {
-  if (syncController) syncController.abort();
+async function syncPeaOS({ silent = false, force = false } = {}) {
+  if (syncInFlight && !force) return;
+  if (syncInFlight && force && syncController) syncController.abort();
+  syncInFlight = true;
   syncController = new AbortController();
+  const controller = syncController;
+  const timeout = setTimeout(() => controller.abort(), SYNC_TIMEOUT);
   if (!silent) setIntegration({ status: 'connecting', error: null });
   try {
-    const [manifestResponse, registryResponse] = await Promise.all([fetchFresh(PEAOS_MANIFEST), fetchFresh(CERT_REGISTRY)]);
-    if (!manifestResponse.ok || !registryResponse.ok) throw new Error('No se pudo leer el manifiesto o el registro remoto.');
+    const [manifestResponse, registryResponse] = await Promise.all([
+      fetchFresh(PEAOS_MANIFEST, controller.signal),
+      fetchFresh(CERT_REGISTRY, controller.signal)
+    ]);
     const [os, registry] = await Promise.all([manifestResponse.json(), registryResponse.json()]);
     validateRemote(os, registry);
     integration = { status: 'connected', os, registry, error: null, lastSync: new Date() };
   } catch (error) {
-    if (error.name === 'AbortError') return;
-    integration = { ...integration, status: 'offline', error: error.message || 'Error de sincronización.' };
-  } finally { render(); }
+    if (error.name !== 'AbortError') {
+      const message = error.name === 'TypeError'
+        ? 'No se pudo conectar con GitHub. Comprueba la red o el bloqueo del navegador.'
+        : (error.message || 'Error de sincronización.');
+      integration = { ...integration, status: 'offline', error: message };
+    }
+  } finally {
+    clearTimeout(timeout);
+    if (syncController === controller) syncController = null;
+    syncInFlight = false;
+    render();
+  }
 }
 
 function setIntegration(patch) { integration = { ...integration, ...patch }; render(); }
-function startLiveSync() { if (syncTimer) clearInterval(syncTimer); syncTimer = setInterval(() => syncPeaOS({ silent: true }), SYNC_INTERVAL); }
+function startLiveSync() {
+  if (syncTimer) clearInterval(syncTimer);
+  syncTimer = setInterval(() => syncPeaOS({ silent: true }), SYNC_INTERVAL);
+}
 function connectionStatus() { if (integration.status === 'connected') return ['online', 'conectado']; if (integration.status === 'connecting') return ['pending', 'conectando']; return ['offline', 'sin conexión']; }
 
 function render() {
@@ -151,7 +177,7 @@ function saveWdp() { const input = document.querySelector('#wdpOrigin'); const e
 function deleteWdp() { state.wdp = null; saveState(); authDialog.close(); render(); }
 
 accountButton?.addEventListener('click', () => state.user ? showAccount() : openAuth('login'));
-app.addEventListener('click', event => { const actionElement = event.target.closest('[data-action]'); if (!actionElement) return; const action = actionElement.dataset.action; if (action === 'account') state.user ? showAccount() : openAuth('signup'); else if (action === 'new-cert') state.user ? certDialog.showModal() : openAuth('signup'); else if (action === 'sync') syncPeaOS(); else if (action === 'wdp') state.user ? showWdp() : openAuth('signup'); else if (action === 'delete-cert') deleteCertificate(actionElement.dataset.id); });
+app.addEventListener('click', event => { const actionElement = event.target.closest('[data-action]'); if (!actionElement) return; const action = actionElement.dataset.action; if (action === 'account') state.user ? showAccount() : openAuth('signup'); else if (action === 'new-cert') state.user ? certDialog.showModal() : openAuth('signup'); else if (action === 'sync') syncPeaOS({ force: true }); else if (action === 'wdp') state.user ? showWdp() : openAuth('signup'); else if (action === 'delete-cert') deleteCertificate(actionElement.dataset.id); });
 authDialog.addEventListener('click', event => { if (event.target === authDialog) { authDialog.close(); return; } const authAction = event.target.closest('[data-auth]')?.dataset.auth; if (authAction === 'submit') submitAuth(authContent.dataset.mode || 'login'); if (authAction === 'switch') renderAuth((authContent.dataset.mode || 'login') === 'login' ? 'signup' : 'login'); const accountAction = event.target.closest('[data-account]')?.dataset.account; if (accountAction === 'logout') { state.user = null; saveState(); authDialog.close(); render(); } const wdpAction = event.target.closest('[data-wdp]')?.dataset.wdp; if (wdpAction === 'submit') saveWdp(); if (wdpAction === 'delete') deleteWdp(); });
 certForm.addEventListener('submit', event => { event.preventDefault(); createLocalCertificate(); });
 
