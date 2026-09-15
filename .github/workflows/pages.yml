@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'web/**'
+      - 'registry.json'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -26,6 +27,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Validate authoritative registry
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const registry = JSON.parse(fs.readFileSync('registry.json', 'utf8'));
+          if (registry.issuer !== 'peaOS.Officialy-certificates') throw new Error('registry issuer mismatch');
+          if (registry.schema !== 1) throw new Error('unsupported registry schema');
+          if (registry.peaOS_certificate_version !== 2) throw new Error('certificate version mismatch');
+          if (!Array.isArray(registry.certificates)) throw new Error('registry.certificates must be an array');
+          for (const cert of registry.certificates) {
+            if (!cert || typeof cert.id !== 'string' || !cert.id) throw new Error('certificate without id');
+            if (typeof cert.status !== 'string' || !cert.status) throw new Error(`certificate ${cert.id} without status`);
+          }
+          console.log(`authoritative registry: ${registry.certificates.length} certificate(s)`);
+          NODE
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
