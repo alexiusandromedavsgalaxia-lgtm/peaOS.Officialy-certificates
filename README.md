@@ -1,22 +1,23 @@
 # peaOS Officially Certificates
 
-> visor del registro de certificados conocido por este repositorio
+> visor del registro oficial de certificados de peaOS sincronizado con este repositorio
 
 ## Web de peaCloud
 
-**[Abrir peaCloud Certificates](https://alexiusandromedavsgalaxia-lgtm.github.io)**
+**[Abrir peaCloud Certificates](https://alexiusandromedavsgalaxia-lgtm.github.io/peaOS.Officialy-certificates/)**
 
-La web incluye un visor de certificados, creación de certificados para desarrollo, cuenta peaCloud local y formulario de inscripción al **WDP (Web Distribution Program)**.
+La web muestra el registro oficial, su estado de sincronización y las herramientas locales de desarrollo.
 
-> **Importante:** esta primera versión es una aplicación estática. Las cuentas, certificados creados y solicitudes WDP se guardan en el navegador mediante `localStorage`; no se presentan como un servicio cloud real ni como certificados oficialmente emitidos. La activación, revocación y revisión oficial requieren un backend de autoridad.
+## Registro sincronizado
 
+Este README se mantiene automáticamente a partir de `registry.json` mediante GitHub Actions. El archivo `registry.json` de la raíz es la **fuente autoritativa** del registro, y la copia publicada en `web/` se utiliza para que GitHub Pages pueda leerla desde el mismo origen.
+
+> El README no inventa certificados. Si el registro está vacío, los contadores y listados permanecen en cero.
+
+<!-- REGISTRY:START -->
 ## Estado actual
 
 **Certificados conocidos: 0**
-
-En este momento el repositorio no contiene un registro verificable de certificados emitidos, activos, revocados, instalados o distribuidos.
-
-Por tanto, no se muestran certificados, páginas web ni aplicaciones asociadas. No se inventan entradas para rellenar el visor.
 
 | Campo | Estado |
 |---|---:|
@@ -34,26 +35,13 @@ Por tanto, no se muestran certificados, páginas web ni aplicaciones asociadas. 
 ## Registro de certificados
 
 _No hay certificados registrados._
+<!-- REGISTRY:END -->
 
-## Sitios web de distribución
+## Cómo funciona la actualización
 
-_No hay sitios web registrados._
+1. `registry.json` sigue siendo la fuente oficial.
+2. Un workflow sincroniza los datos necesarios para GitHub Pages.
+3. El README se regenera cuando cambia el registro.
+4. Los certificados se muestran únicamente cuando existen entradas verificables en el registro.
 
-## Aplicaciones asociadas
-
-_No hay aplicaciones registradas._
-
-## Cómo se actualizará
-
-Cuando exista una fuente verificable de registro, cada entrada podrá mostrar:
-
-- identificador y número de serie del certificado
-- estado actual
-- fecha de emisión y expiración
-- distribución local o Web Distribution
-- sitio/origen web autorizado
-- aplicaciones asociadas
-- última comprobación
-- estado de activación y revocación
-
-Los datos que no estén realmente registrados o verificados se dejarán vacíos o se marcarán como desconocidos. Este README no debe convertirse en una base de datos de información inventada.
+Los datos que no estén realmente registrados o verificados no se rellenan con valores inventados.
