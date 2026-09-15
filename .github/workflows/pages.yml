@@ -46,6 +46,8 @@ jobs:
           }
           console.log(`authoritative registry: ${registry.certificates.length} certificate(s)`);
           NODE
+      - name: Prepare same-origin registry
+        run: cp registry.json web/registry.json
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
