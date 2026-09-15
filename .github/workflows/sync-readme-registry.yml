@@ -1,0 +1,93 @@
+name: Sync certificate README
+
+on:
+  push:
+    paths:
+      - registry.json
+      - .github/workflows/sync-readme-registry.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-readme:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate README registry section
+        env:
+          REGISTRY: registry.json
+          README: README.md
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          registry = json.loads(Path("registry.json").read_text(encoding="utf-8"))
+          certs = registry.get("certificates", [])
+
+          active = sum(1 for c in certs if c.get("status") == "active")
+          revoked = sum(1 for c in certs if c.get("status") == "revoked")
+          expired = sum(1 for c in certs if c.get("status") == "expired")
+          invalid = sum(1 for c in certs if c.get("status") == "invalid")
+          unavailable = sum(1 for c in certs if c.get("status") == "server-unavailable")
+
+          lines = [
+              "## Estado actual",
+              "",
+              f"**Certificados conocidos: {len(certs)}**",
+              "",
+              "| Campo | Estado |",
+              "|---|---:|",
+              f"| Certificados conocidos | {len(certs)} |",
+              f"| Activos | {active} |",
+              f"| Revocados | {revoked} |",
+              f"| Expirados | {expired} |",
+              f"| Inválidos | {invalid} |",
+              f"| Servidor no disponible | {unavailable} |",
+              "| Distribución local | 0 |",
+              "| Web Distribution | 0 |",
+              "| Aplicaciones registradas | 0 |",
+              "| Sitios web registrados | 0 |",
+              "",
+              "## Registro de certificados",
+              "",
+          ]
+
+          if certs:
+              lines += [
+                  "| ID | Estado | Serie | Emisión | Expiración | SHA-512 |",
+                  "|---|---|---|---|---|---|",
+              ]
+              for c in certs:
+                  lines.append(
+                      f"| `{c.get('id','')}` | {c.get('status','')} | `{c.get('serial','')}` | "
+                      f"{c.get('issued_at','')} | {c.get('expires_at','')} | `{c.get('sha512','')}` |"
+                  )
+          else:
+              lines.append("_No hay certificados registrados._")
+
+          new_section = "\n".join(lines)
+          readme = Path("README.md").read_text(encoding="utf-8")
+          start = "<!-- REGISTRY:START -->"
+          end = "<!-- REGISTRY:END -->"
+          a = readme.index(start) + len(start)
+          b = readme.index(end)
+          readme = readme[:a] + "\n" + new_section + "\n" + readme[b:]
+          Path("README.md").write_text(readme, encoding="utf-8")
+          PY
+
+      - name: Commit README when changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          if git diff --cached --quiet; then
+            echo "README already synchronized"
+            exit 0
+          fi
+          git commit -m "docs: sync README with certificate registry"
+          git push
