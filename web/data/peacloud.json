@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "product": "peaOS",
+  "channel": "Beta",
+  "version": "1 Beta 1",
+  "kernel": "x86_64",
+  "certificate_version": 3,
+  "certificate_type": "SigningCertificate",
+  "certificate_protocol": "R35-SHA512",
+  "certificate_magic": "0x50434150",
+  "certificate_service": "https://github.com/alexiusandromedavsgalaxia-lgtm/peaOS.Officialy-certificates",
+  "certificate_registry": "https://raw.githubusercontent.com/alexiusandromedavsgalaxia-lgtm/peaOS.Officialy-certificates/main/registry.json",
+  "certificate_endpoint_template": "https://raw.githubusercontent.com/alexiusandromedavsgalaxia-lgtm/peaOS.Officialy-certificates/main/certificates/{certificate_id}.json",
+  "peacloud_web": "https://alexiusandromedavsgalaxia-lgtm.github.io/peaOS.Officialy-certificates/",
+  "status": "development"
+}
