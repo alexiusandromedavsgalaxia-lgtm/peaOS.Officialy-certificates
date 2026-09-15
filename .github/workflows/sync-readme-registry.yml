@@ -1,4 +1,4 @@
-name: Sync certificate README
+name: Sync certificate registry mirrors
 
 on:
   push:
@@ -11,16 +11,36 @@ permissions:
   contents: write
 
 jobs:
-  sync-readme:
+  sync:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate authoritative registry
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const registry = JSON.parse(fs.readFileSync('registry.json', 'utf8'));
+          if (registry.issuer !== 'peaOS.Officialy-certificates') throw new Error('registry issuer mismatch');
+          if (registry.schema !== 1) throw new Error('unsupported registry schema');
+          if (registry.peaOS_certificate_version !== 3) throw new Error('certificate version mismatch');
+          if (registry.certificate_type !== 'SigningCertificate') throw new Error('certificate type mismatch');
+          if (registry.authentication !== 'R35-SHA512') throw new Error('authentication protocol mismatch');
+          if (!Array.isArray(registry.certificates)) throw new Error('registry.certificates must be an array');
+          for (const cert of registry.certificates) {
+            if (!cert || typeof cert.id !== 'string' || !/^[0-9a-f]{32}$/.test(cert.id)) throw new Error('certificate id must be 32 lowercase hex characters');
+            if (cert.type !== 'SigningCertificate') throw new Error(`certificate ${cert.id} type mismatch`);
+            if (typeof cert.status !== 'string' || !cert.status) throw new Error(`certificate ${cert.id} without status`);
+            if (typeof cert.sha512 !== 'string' || !/^[0-9a-f]{128}$/.test(cert.sha512)) throw new Error(`certificate ${cert.id} has invalid SHA-512`);
+          }
+          console.log(`authoritative registry: ${registry.certificates.length} certificate(s)`);
+          NODE
+
+      - name: Mirror authoritative registry to web
+        run: cp registry.json web/registry.json
+
       - name: Generate README registry section
-        env:
-          REGISTRY: registry.json
-          README: README.md
         run: |
           python3 - <<'PY'
           import json
@@ -80,14 +100,17 @@ jobs:
           Path("README.md").write_text(readme, encoding="utf-8")
           PY
 
-      - name: Commit README when changed
+      - name: Verify mirrors are byte-identical
+        run: cmp -s registry.json web/registry.json
+
+      - name: Commit synchronized mirrors
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add README.md
+          git add web/registry.json README.md
           if git diff --cached --quiet; then
-            echo "README already synchronized"
+            echo "All registry mirrors already synchronized"
             exit 0
           fi
-          git commit -m "docs: sync README with certificate registry"
+          git commit -m "chore: sync registry mirrors"
           git push
