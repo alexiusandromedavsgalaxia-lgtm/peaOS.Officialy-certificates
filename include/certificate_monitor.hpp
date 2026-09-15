@@ -10,9 +10,7 @@ constexpr uint32_t kMaxTrackedCertificates = 256;
 enum class InstallState : uint8_t { Unknown, Installed, Missing, Invalid, Expired, Active, Revoked, ServerUnavailable };
 
 struct CertificateRecord {
-    uint64_t serial;
-    uint8_t certificate_id[16];
-    uint8_t distribution;
+    certificate::Certificate certificate;
     InstallState state;
     bool installed;
     bool server_active;
