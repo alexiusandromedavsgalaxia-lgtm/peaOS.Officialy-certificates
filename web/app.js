@@ -3,7 +3,7 @@ const LEGACY_KEY = 'peacloud-state-v2';
 const PEAOS_MANIFEST = 'https://raw.githubusercontent.com/alexiusandromedavsgalaxia-lgtm/peaOS/main/peacloud.json';
 const CERT_REGISTRY = 'https://raw.githubusercontent.com/alexiusandromedavsgalaxia-lgtm/peaOS.Officialy-certificates/main/registry.json';
 const SYNC_INTERVAL = 5000;
-const MIN_PASSWORD_LENGTH = 64;
+const MIN_PASSWORD_LENGTH = 8;
 const PBKDF2_ITERATIONS = 600000;
 
 const app = document.querySelector('#app');
@@ -228,7 +228,7 @@ function updateAccountButton() {
 
 function openAuth(mode) {
   renderAuth(mode);
-  authDialog.showModal();
+  if (!authDialog.open) authDialog.showModal();
 }
 
 function renderAuth(mode) {
@@ -236,14 +236,14 @@ function renderAuth(mode) {
   const login = mode === 'login';
   authContent.innerHTML = login ? `
     <div class="dialog-icon">↗</div><h2>Iniciar sesión</h2><p class="muted">Tu cuenta actual es local a este navegador.</p>
-    <label>Correo<input id="authEmail" type="email" required autocomplete="email"></label>
-    <label>Contraseña<input id="authPassword" type="password" required minlength="${MIN_PASSWORD_LENGTH}" autocomplete="current-password"></label>
+    <label>Correo electrónico<input id="authEmail" type="email" required autocomplete="email" placeholder="tu@correo.com"></label>
+    <label>Contraseña<input id="authPassword" type="password" required minlength="${MIN_PASSWORD_LENGTH}" autocomplete="current-password"><small>mínimo ${MIN_PASSWORD_LENGTH} caracteres</small></label>
     <button type="button" class="primary" data-auth="submit">Entrar <span>→</span></button><p id="authError" class="error"></p>
     <p class="switch">¿No tienes cuenta? <button type="button" data-auth="switch">Crear cuenta</button></p>` : `
-    <div class="dialog-icon">✦</div><h2>Crear cuenta peaCloud</h2><p class="muted">Cuenta local. La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.</p>
-    <label>Nombre<input id="authName" required maxlength="60" autocomplete="name"></label>
-    <label>Correo<input id="authEmail" type="email" required autocomplete="email"></label>
-    <label>Contraseña<input id="authPassword" type="password" required minlength="${MIN_PASSWORD_LENGTH}" autocomplete="new-password"></label>
+    <div class="dialog-icon">✦</div><h2>Crear cuenta peaCloud</h2><p class="muted">Cuenta local. Usa cualquier correo electrónico válido y una contraseña de al menos ${MIN_PASSWORD_LENGTH} caracteres.</p>
+    <label>Nombre<input id="authName" required maxlength="60" autocomplete="name" placeholder="Tu nombre"></label>
+    <label>Correo electrónico<input id="authEmail" type="email" required autocomplete="email" placeholder="tu@correo.com"></label>
+    <label>Contraseña<input id="authPassword" type="password" required minlength="${MIN_PASSWORD_LENGTH}" autocomplete="new-password"><small>mínimo ${MIN_PASSWORD_LENGTH} caracteres</small></label>
     <button type="button" class="primary" data-auth="submit">Crear cuenta <span>→</span></button><p id="authError" class="error"></p>
     <p class="switch">¿Ya tienes cuenta? <button type="button" data-auth="switch">Iniciar sesión</button></p>`;
 }
@@ -254,29 +254,58 @@ async function submitAuth(mode) {
   const error = document.querySelector('#authError');
   const email = emailInput.value.trim().toLowerCase();
   const password = passwordInput.value;
-  if (!emailInput.checkValidity() || password.length < MIN_PASSWORD_LENGTH) {
-    error.textContent = `Usa un correo válido y una contraseña de al menos ${MIN_PASSWORD_LENGTH} caracteres.`;
+  error.textContent = '';
+
+  if (!email) {
+    error.textContent = 'Escribe tu correo electrónico.';
+    emailInput.focus();
     return;
   }
+  if (!emailInput.validity.valid) {
+    error.textContent = 'El correo electrónico no tiene un formato válido. Ejemplo: nombre@dominio.com';
+    emailInput.focus();
+    return;
+  }
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    error.textContent = `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`;
+    passwordInput.focus();
+    return;
+  }
+
   const submitButton = document.querySelector('[data-auth="submit"]');
   submitButton.disabled = true;
   try {
     if (mode === 'signup') {
       const name = document.querySelector('#authName').value.trim();
-      if (!name) { error.textContent = 'Escribe tu nombre.'; return; }
-      if (state.user) { error.textContent = 'Ya existe una cuenta local en este navegador.'; return; }
+      if (!name) {
+        error.textContent = 'Escribe tu nombre.';
+        document.querySelector('#authName').focus();
+        return;
+      }
+      if (state.user) {
+        error.textContent = 'Ya existe una cuenta local en este navegador.';
+        return;
+      }
       const salt = randomBytes(32);
       const hash = await passwordHash(password, salt);
       state.user = { name, email, password: { algorithm: 'PBKDF2-HMAC-SHA-512', iterations: PBKDF2_ITERATIONS, salt: toBase64(salt), hash } };
-      saveState(); authDialog.close(); render(); return;
+      saveState();
+      authDialog.close();
+      render();
+      return;
     }
     if (!state.user || state.user.email !== email || !state.user.password) {
-      error.textContent = 'No existe una cuenta local válida con ese correo.'; return;
+      error.textContent = 'No existe una cuenta local válida con ese correo.';
+      return;
     }
     const salt = fromBase64(state.user.password.salt);
     const hash = await passwordHash(password, salt);
-    if (hash !== state.user.password.hash) { error.textContent = 'Correo o contraseña incorrectos.'; return; }
-    authDialog.close(); render();
+    if (hash !== state.user.password.hash) {
+      error.textContent = 'Correo o contraseña incorrectos.';
+      return;
+    }
+    authDialog.close();
+    render();
   } catch {
     error.textContent = 'No se pudo completar la operación de autenticación.';
   } finally {
@@ -343,7 +372,7 @@ authDialog.addEventListener('click', event => {
   if (event.target === authDialog) { authDialog.close(); return; }
   const authAction = event.target.closest('[data-auth]')?.dataset.auth;
   if (authAction === 'submit') submitAuth(authContent.dataset.mode || 'login');
-  if (authAction === 'switch') openAuth((authContent.dataset.mode || 'login') === 'login' ? 'signup' : 'login');
+  if (authAction === 'switch') renderAuth((authContent.dataset.mode || 'login') === 'login' ? 'signup' : 'login');
   const accountAction = event.target.closest('[data-account]')?.dataset.account;
   if (accountAction === 'logout') { state.user = null; saveState(); authDialog.close(); render(); }
   const wdpAction = event.target.closest('[data-wdp]')?.dataset.wdp;
