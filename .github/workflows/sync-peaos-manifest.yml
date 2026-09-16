@@ -23,10 +23,8 @@ jobs:
         run: |
           set -euo pipefail
           curl --fail --location --silent --show-error --retry 3 \
-            -H 'Accept: application/vnd.github.raw+json' \
-            'https://api.github.com/repos/alexiusandromedavsgalaxia-lgtm/peaOS/contents/peacloud.json?ref=main' \
-            -o /tmp/peacloud.json.b64
-          base64 -d /tmp/peacloud.json.b64 > web/data/peacloud.json
+            'https://raw.githubusercontent.com/alexiusandromedavsgalaxia-lgtm/peaOS/main/peacloud.json' \
+            -o web/data/peacloud.json
           node - <<'NODE'
           const fs = require('fs');
           const manifest = JSON.parse(fs.readFileSync('web/data/peacloud.json', 'utf8'));
