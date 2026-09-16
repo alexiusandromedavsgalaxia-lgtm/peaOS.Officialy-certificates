@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#080a0f">
   <meta name="color-scheme" content="dark">
-  <meta name="description" content="peaCloud · registro de certificados de firma para peaOS">
+  <meta name="description" content="peaCloud · official signing certificate registry for peaOS">
   <title>peaCloud · Certificates</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,8 +24,9 @@
   </header>
   <main id="app" class="shell"></main>
   <dialog id="authDialog"><form method="dialog" id="authForm" class="dialog-card"><button class="close" value="cancel" aria-label="Cerrar">×</button><div id="authContent"></div></form></dialog>
-  <dialog id="certDialog"><form method="dialog" id="certForm" class="dialog-card"><button class="close" value="cancel" aria-label="Cerrar">×</button><div class="dialog-icon">✦</div><h2>Crear certificado de firma</h2><p class="muted">Genera un borrador local para una identidad criptográfica. No está ligado a una app, dominio ni programa de distribución.</p><label>Nombre del certificado<input name="name" required maxlength="80" placeholder="Mi identidad de firma"></label><div class="notice"><b>SigningCertificate</b><span>R35-SHA512 · Ed25519</span></div><button class="primary" type="submit">Crear certificado local <span>→</span></button><p id="certFormError" class="error"></p></form></dialog>
+  <dialog id="certDialog"><form method="dialog" id="certForm" class="dialog-card"><button class="close" value="cancel" aria-label="Cerrar">×</button><div class="dialog-icon">✦</div><h2>Crear certificado de firma</h2><p class="muted">Genera un registro de certificado y prepara su publicación en el registro oficial de peaOS. No se considera oficial hasta que la solicitud sea validada por el workflow del repositorio.</p><label>Nombre del certificado<input name="name" required maxlength="80" placeholder="Mi identidad de firma"></label><div class="notice"><b>SigningCertificate</b><span>R35-SHA512 · Ed25519</span></div><button class="primary" type="submit">Solicitar publicación <span>→</span></button><p id="certFormError" class="error"></p></form></dialog>
   <script src="app.js?v=d55f4541"></script>
+  <script src="publish.js?v=1"></script>
   <script>
     const peaCloudEmailPattern = "[^\\s@]+@[^\\s@]+\\.[^\\s@]+";
     function normalizePeaCloudEmailInput(input) {
