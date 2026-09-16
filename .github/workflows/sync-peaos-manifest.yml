@@ -1,6 +1,9 @@
 name: Sync peaOS manifest
 
 on:
+  push:
+    paths:
+      - '.github/workflows/sync-peaos-manifest.yml'
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
