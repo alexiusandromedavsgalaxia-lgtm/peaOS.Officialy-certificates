@@ -1,0 +1,149 @@
+name: Publish certificate request
+
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: publish-certificate-registry
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event_name == 'issues' && startsWith(github.event.issue.title, '[peaOS Certificate]')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify authorized publisher
+        env:
+          ISSUE_USER: ${{ github.event.issue.user.login }}
+        run: |
+          set -euo pipefail
+          test "$ISSUE_USER" = "alexiusandromedavsgalaxia-lgtm" || {
+            echo "Only the authorized repository owner can publish certificates."
+            exit 1
+          }
+
+      - name: Extract and validate certificate record
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re
+          from pathlib import Path
+
+          body = os.environ.get("ISSUE_BODY", "")
+          start = "CERTIFICATE_JSON_BEGIN"
+          end = "CERTIFICATE_JSON_END"
+          if start not in body or end not in body:
+              raise SystemExit("certificate payload markers are missing")
+          payload = body.split(start, 1)[1].split(end, 1)[0].strip()
+          cert = json.loads(payload)
+
+          if cert.get("type") != "SigningCertificate":
+              raise SystemExit("certificate type mismatch")
+          if not re.fullmatch(r"[0-9a-f]{32}", cert.get("id", "")):
+              raise SystemExit("certificate id must be 32 lowercase hexadecimal characters")
+          if not re.fullmatch(r"[0-9a-f]{128}", cert.get("sha512", "")):
+              raise SystemExit("certificate sha512 must be 128 lowercase hexadecimal characters")
+          if cert.get("status") not in {"active", "revoked", "expired", "invalid", "server-unavailable"}:
+              raise SystemExit("unsupported certificate status")
+          for field in ("serial", "issued_at", "expires_at"):
+              if not isinstance(cert.get(field), str) or not cert[field]:
+                  raise SystemExit(f"missing certificate field: {field}")
+
+          Path("/tmp/certificate.json").write_text(json.dumps(cert, separators=(",", ":")), encoding="utf-8")
+          PY
+
+      - name: Append certificate to authoritative registry
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const registry = JSON.parse(fs.readFileSync('registry.json', 'utf8'));
+          const cert = JSON.parse(fs.readFileSync('/tmp/certificate.json', 'utf8'));
+          if (registry.issuer !== 'peaOS.Officialy-certificates') throw new Error('registry issuer mismatch');
+          if (registry.schema !== 1) throw new Error('unsupported registry schema');
+          if (registry.peaOS_certificate_version !== 3) throw new Error('certificate version mismatch');
+          if (registry.certificate_type !== 'SigningCertificate') throw new Error('certificate type mismatch');
+          if (registry.authentication !== 'R35-SHA512') throw new Error('authentication protocol mismatch');
+          if (!Array.isArray(registry.certificates)) throw new Error('registry.certificates must be an array');
+          if (registry.certificates.some(item => item.id === cert.id)) throw new Error(`certificate ${cert.id} already exists`);
+          registry.certificates.push(cert);
+          fs.writeFileSync('registry.json', JSON.stringify(registry, null, 2) + '\n');
+          fs.writeFileSync('web/registry.json', JSON.stringify(registry, null, 2) + '\n');
+          NODE
+
+      - name: Generate English README registry section
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          registry = json.loads(Path("registry.json").read_text(encoding="utf-8"))
+          certs = registry.get("certificates", [])
+          counts = {
+              "active": sum(1 for c in certs if c.get("status") == "active"),
+              "revoked": sum(1 for c in certs if c.get("status") == "revoked"),
+              "expired": sum(1 for c in certs if c.get("status") == "expired"),
+              "invalid": sum(1 for c in certs if c.get("status") == "invalid"),
+              "server-unavailable": sum(1 for c in certs if c.get("status") == "server-unavailable"),
+          }
+
+          lines = [
+              "## Current status", "",
+              f"**Known certificates: {len(certs)}**", "",
+              "| Field | Value |", "|---|---:|",
+              f"| Known certificates | {len(certs)} |",
+              f"| Active | {counts['active']} |",
+              f"| Revoked | {counts['revoked']} |",
+              f"| Expired | {counts['expired']} |",
+              f"| Invalid | {counts['invalid']} |",
+              f"| Server unavailable | {counts['server-unavailable']} |",
+              "| Local distribution | 0 |",
+              "| Web Distribution | 0 |",
+              "| Registered applications | 0 |",
+              "| Registered websites | 0 |", "", "## Certificate registry", ""
+          ]
+          if certs:
+              lines += ["| ID | Status | Serial | Issued | Expires | SHA-512 |", "|---|---|---|---|---|---|"]
+              for c in certs:
+                  lines.append(f"| `{c['id']}` | {c['status']} | `{c['serial']}` | {c['issued_at']} | {c['expires_at']} | `{c['sha512']}` |")
+          else:
+              lines.append("_No certificates are currently registered._")
+
+          readme = Path("README.md").read_text(encoding="utf-8")
+          start = "<!-- REGISTRY:START -->"
+          end = "<!-- REGISTRY:END -->"
+          a = readme.index(start) + len(start)
+          b = readme.index(end)
+          readme = readme[:a] + "\n" + "\n".join(lines) + "\n" + readme[b:]
+          Path("README.md").write_text(readme, encoding="utf-8")
+          PY
+
+      - name: Commit official certificate
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add registry.json web/registry.json README.md
+          git commit -m "cert: publish certificate from issue #${ISSUE_NUMBER}"
+          git push
+
+      - name: Confirm publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "Published to the authoritative certificate registry. The GitHub Pages registry and README have been updated."
+          gh issue close "$ISSUE_NUMBER"
