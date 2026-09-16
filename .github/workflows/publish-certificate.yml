@@ -8,6 +8,8 @@ on:
 permissions:
   contents: write
   issues: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: publish-certificate-registry
@@ -139,6 +141,18 @@ jobs:
           git add registry.json web/registry.json README.md
           git commit -m "cert: publish certificate from issue #${ISSUE_NUMBER}"
           git push
+
+      - name: Deploy GitHub Pages with the new registry
+        uses: actions/configure-pages@v5
+
+      - name: Upload updated certificate site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './web'
+
+      - name: Publish updated certificate site
+        id: deployment
+        uses: actions/deploy-pages@v4
 
       - name: Confirm publication
         env:
