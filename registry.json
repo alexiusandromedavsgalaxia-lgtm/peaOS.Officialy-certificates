@@ -4,5 +4,12 @@
   "peaOS_certificate_version": 3,
   "certificate_type": "SigningCertificate",
   "authentication": "R35-SHA512",
-  "certificates": []
+  "certificates": [
+    {
+      "name": "CYU Distribution",
+      "type": "WebDistribution",
+      "expiry": "28-Feb-2028",
+      "state": "Active",
+    }
+  ]
 }
